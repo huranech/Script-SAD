@@ -62,10 +62,10 @@ if __name__ == '__main__':
         else:
             return str(x)
 
-    #Abrir el fichero .csv y cargarlo en un dataframe de pandas
+    # abrir el fichero .csv y cargarlo en un dataframe de pandas
     ml_dataset = pd.read_csv(iFile)
 
-    #comprobar que los datos se han cargado bien. Cuidado con las cabeceras, la primera línea por defecto la considerara como la que almacena los nombres de los atributos
+    # comprobar que los datos se han cargado bien. Cuidado con las cabeceras, la primera línea por defecto la considerara como la que almacena los nombres de los atributos
     # comprobar los parametros por defecto del pd.read_csv en lo referente a las cabeceras si no se quiere lo comentado
 
     #print(ml_dataset.head(5))
