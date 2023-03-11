@@ -71,4 +71,6 @@ if __name__ == '__main__':
     ml_dataset['__target__'] = ml_dataset['Especie'].map(str).map(target_map)
     del ml_dataset['Especie']
 
-    
+    # se eliminan las filas para las que el TARGET es null / se pasan los datos que fueran float a Integer
+    ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
+    ml_dataset['__target__'] = ml_dataset['__target__'].astype(np.int64)
