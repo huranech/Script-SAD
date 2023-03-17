@@ -141,9 +141,9 @@ if __name__ == '__main__':
     barridoK = []
     for numero in range(k):
         if numero == 0:
-            # no ocurre nada, no se permite el valor 0
+           pass # no ocurre nada, no se permite el valor 0
         elif numero % 2 == 0:
-            
+
     
     for parametroK in barridoK:
 
