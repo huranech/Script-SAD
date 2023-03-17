@@ -31,7 +31,7 @@ if __name__ == '__main__':
             print(' -p modelAndTestFilePath \n -m modelFileName -f testFileName\n ')
             exit(1)
         elif opt in ('-k','--kparameter'):
-            k = arg
+            k = int(arg)
 
     if p == './':
         # model=p+str(m)
@@ -137,44 +137,54 @@ if __name__ == '__main__':
     Y_train = np.array(train['__target__'])
     Y_test = np.array(test['__target__'])
 
-    # [HARDCODE] se crea el modelo con unos hiperparámetros predefinidos
-    from sklearn.neighbors import KNeighborsClassifier
-    clf = KNeighborsClassifier(n_neighbors=5,
-                          weights='uniform',
-                          algorithm='auto',
-                          leaf_size=30,
-                          p=2)
+    # conjunto de bucles donde sucede el barrido de hiperparámetros. Primero llenamos arrays con su respectivo parámetro
+    barridoK = []
+    for numero in range(k):
+        if numero == 0:
+            # no ocurre nada, no se permite el valor 0
+        elif numero % 2 == 0:
+            
     
-    # se balancean los datos (esto puede no interesarnos)
-    clf.class_weight = "balanced"
+    for parametroK in barridoK:
 
-    # entrena el algoritmo para que, basándose en los datos de los features de X_train se cree una coincidencia con las labels de y_train
-    clf.fit(X_train, Y_train)
+        # [HARDCODE] se crea el modelo con unos hiperparámetros predefinidos
+        from sklearn.neighbors import KNeighborsClassifier
+        clf = KNeighborsClassifier(n_neighbors=parametroK,
+                            weights='uniform',
+                            algorithm='auto',
+                            leaf_size=30,
+                            p=2)
+        
+        # se balancean los datos (esto puede no interesarnos)
+        clf.class_weight = "balanced"
 
-    # se realizan las predicciones
-    predictions = clf.predict(X_test)
-    probas = clf.predict_proba(X_test)
+        # entrena el algoritmo para que, basándose en los datos de los features de X_train se cree una coincidencia con las labels de y_train
+        clf.fit(X_train, Y_train)
 
-    predictions = pd.Series(data=predictions, index=X_test.index, name='predicted_value')
-    cols = [
-        u'probability_of_value_%s' % label
-        for (_, label) in sorted([(int(target_map[label]), label) for label in target_map])
-    ]
-    probabilities = pd.DataFrame(data=probas, index=X_test.index, columns=cols)
+        # se realizan las predicciones
+        predictions = clf.predict(X_test)
+        probas = clf.predict_proba(X_test)
 
-    # construir la evaluación de los resultados
-    results_test = X_test.join(predictions, how='left')
-    results_test = results_test.join(probabilities, how='left')
-    results_test = results_test.join(test['__target__'], how='left')
-    results_test = results_test.rename(columns= {'__target__': 'TARGET'})
+        predictions = pd.Series(data=predictions, index=X_test.index, name='predicted_value')
+        cols = [
+            u'probability_of_value_%s' % label
+            for (_, label) in sorted([(int(target_map[label]), label) for label in target_map])
+        ]
+        probabilities = pd.DataFrame(data=probas, index=X_test.index, columns=cols)
 
-    i=0
-    for real,pred in zip(Y_test,predictions):
-        print(real,pred)
-        i+=1
-        if i>5:
-            break
+        # construir la evaluación de los resultados
+        results_test = X_test.join(predictions, how='left')
+        results_test = results_test.join(probabilities, how='left')
+        results_test = results_test.join(test['__target__'], how='left')
+        results_test = results_test.rename(columns= {'__target__': 'TARGET'})
 
-    print(f1_score(Y_test, predictions, average=None))
-    print(classification_report(Y_test,predictions))
-    print(confusion_matrix(Y_test, predictions, labels=[1,0]))
+        i=0
+        for real,pred in zip(Y_test,predictions):
+            print(real,pred)
+            i+=1
+            if i>5:
+                break
+
+        print(f1_score(Y_test, predictions, average=None))
+        print(classification_report(Y_test,predictions))
+        print(confusion_matrix(Y_test, predictions, labels=[1,0]))
