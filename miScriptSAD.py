@@ -30,15 +30,14 @@ if __name__ == '__main__':
         elif opt in ('-h','--help'):
             print(' -p modelAndTestFilePath \n -m modelFileName -f testFileName\n ')
             exit(1)
-        elif opt in ('-k','--parameter'):
+        elif opt in ('-k','--kparameter'):
             k = arg
-            print(k)
 
     if p == './':
-        model=p+str(m)
+        # model=p+str(m)
         iFile = p+ str(f)
     else:
-        model=p+"/"+str(m)
+        # model=p+"/"+str(m)
         iFile = p+"/" + str(f)
 
 
