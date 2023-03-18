@@ -10,11 +10,11 @@ from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 
-# Runear el código. Pide que se le pasen argumentos
+# ejecutar el código
 if __name__ == '__main__':
     print('ARGV   :',sys.argv[1:])
     try:
-        options,remainder = getopt.getopt(sys.argv[1:],'p:m:f:h:k:d:',['path=','model=','testFile=','h','k=','d='])
+        options,remainder = getopt.getopt(sys.argv[1:],'p:m:f:h:k:n:d:',['path=','model=','testFile=','h','k=','n=','d='])
     except getopt.GetoptError as err:
         print('ERROR:',err)
         sys.exit(1)
@@ -32,9 +32,10 @@ if __name__ == '__main__':
             exit(1)
         elif opt in ('-k','--kparameter'):
             k = int(arg)
+        elif opt in ('-n', '--dminparameter'):
+            pmin = int(arg)
         elif opt in ('-d','--dparameter'):
             d = int(arg)
-            print(d)
 
     if p == './':
         # model=p+str(m)
@@ -140,58 +141,59 @@ if __name__ == '__main__':
     Y_train = np.array(train['__target__'])
     Y_test = np.array(test['__target__'])
 
-    # conjunto de bucles donde sucede el barrido de hiperparámetros. Primero llenamos arrays con todos los valores que toma cada hiperparámetro
+    # primero llenamos un array con todos los valores posibles de k
     barridoK = []
-    for numero in range(k + 2):
+    for numero in range(k + 1):
         if numero == 0:
            pass # no ocurre nada, no se permite el valor 0
         elif not numero % 2 == 0:
             barridoK.append(numero)
 
-    
+    # conjunto de bucles donde sucede el barrido de hiperparámetros.
     for parametroK in barridoK:
+        for parametroP in range(pmin, d+1):
 
         # [HARDCODE] se crea el modelo con unos hiperparámetros predefinidos
-        from sklearn.neighbors import KNeighborsClassifier
-        clf = KNeighborsClassifier(n_neighbors=parametroK,
-                            weights='uniform',
-                            algorithm='auto',
-                            leaf_size=30,
-                            p=2)
-        
-        # se balancean los datos (esto puede no interesarnos)
-        clf.class_weight = "balanced"
+            from sklearn.neighbors import KNeighborsClassifier
+            clf = KNeighborsClassifier(n_neighbors=parametroK,
+                                weights='uniform',
+                                algorithm='auto',
+                                leaf_size=30,
+                                p=parametroP)
+            
+            # se balancean los datos (esto puede no interesarnos)
+            clf.class_weight = "balanced"
 
-        # se imprimen los detalles sobre los hiperparámetros
-        print("experimento con " + "k = " + str(parametroK))
+            # se imprimen los detalles sobre los hiperparámetros
+            print("experimento con " + "k = " + str(parametroK) + ", p = " + str(parametroP))
 
-        # entrena el algoritmo para que, basándose en los datos de los features de X_train se cree una coincidencia con las labels de y_train
-        clf.fit(X_train, Y_train)
+            # entrena el algoritmo para que, basándose en los datos de los features de X_train se cree una coincidencia con las labels de y_train
+            clf.fit(X_train, Y_train)
 
-        # se realizan las predicciones
-        predictions = clf.predict(X_test)
-        probas = clf.predict_proba(X_test)
+            # se realizan las predicciones
+            predictions = clf.predict(X_test)
+            probas = clf.predict_proba(X_test)
 
-        predictions = pd.Series(data=predictions, index=X_test.index, name='predicted_value')
-        cols = [
-            u'probability_of_value_%s' % label
-            for (_, label) in sorted([(int(target_map[label]), label) for label in target_map])
-        ]
-        probabilities = pd.DataFrame(data=probas, index=X_test.index, columns=cols)
+            predictions = pd.Series(data=predictions, index=X_test.index, name='predicted_value')
+            cols = [
+                u'probability_of_value_%s' % label
+                for (_, label) in sorted([(int(target_map[label]), label) for label in target_map])
+            ]
+            probabilities = pd.DataFrame(data=probas, index=X_test.index, columns=cols)
 
-        # construir la evaluación de los resultados
-        results_test = X_test.join(predictions, how='left')
-        results_test = results_test.join(probabilities, how='left')
-        results_test = results_test.join(test['__target__'], how='left')
-        results_test = results_test.rename(columns= {'__target__': 'TARGET'})
+            # construir la evaluación de los resultados
+            results_test = X_test.join(predictions, how='left')
+            results_test = results_test.join(probabilities, how='left')
+            results_test = results_test.join(test['__target__'], how='left')
+            results_test = results_test.rename(columns= {'__target__': 'TARGET'})
 
-        i=0
-        for real,pred in zip(Y_test,predictions):
-            print(real,pred)
-            i+=1
-            if i>5:
-                break
+            i=0
+            for real,pred in zip(Y_test,predictions):
+                print(real,pred)
+                i+=1
+                if i>5:
+                    break
 
-        print(f1_score(Y_test, predictions, average=None))
-        print(classification_report(Y_test,predictions))
-        print(confusion_matrix(Y_test, predictions, labels=[1,0]))
+            print(f1_score(Y_test, predictions, average=None))
+            print(classification_report(Y_test,predictions))
+            print(confusion_matrix(Y_test, predictions, labels=[1,0]))
