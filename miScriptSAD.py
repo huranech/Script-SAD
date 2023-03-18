@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 if __name__ == '__main__':
     print('ARGV   :',sys.argv[1:])
     try:
-        options,remainder = getopt.getopt(sys.argv[1:],'p:m:f:h:k:',['path=','model=','testFile=','h','k='])
+        options,remainder = getopt.getopt(sys.argv[1:],'p:m:f:h:k:d:',['path=','model=','testFile=','h','k=','d='])
     except getopt.GetoptError as err:
         print('ERROR:',err)
         sys.exit(1)
@@ -28,10 +28,13 @@ if __name__ == '__main__':
         elif opt in ('-m', '--model'):
             m = arg
         elif opt in ('-h','--help'):
-            print(' -p modelAndTestFilePath \n -m modelFileName -f testFileName\n ')
+            print(' -p testFilePath \n -m modelName \n -f testFileName \n -k firstParameter(K in KNN) \n -d secondParameter(D in DecisionTree) \n ')
             exit(1)
         elif opt in ('-k','--kparameter'):
             k = int(arg)
+        elif opt in ('-d','--dparameter'):
+            d = int(arg)
+            print(d)
 
     if p == './':
         # model=p+str(m)
@@ -137,12 +140,13 @@ if __name__ == '__main__':
     Y_train = np.array(train['__target__'])
     Y_test = np.array(test['__target__'])
 
-    # conjunto de bucles donde sucede el barrido de hiperparámetros. Primero llenamos arrays con su respectivo parámetro
+    # conjunto de bucles donde sucede el barrido de hiperparámetros. Primero llenamos arrays con todos los valores que toma cada hiperparámetro
     barridoK = []
-    for numero in range(k):
+    for numero in range(k + 2):
         if numero == 0:
            pass # no ocurre nada, no se permite el valor 0
-        elif numero % 2 == 0:
+        elif not numero % 2 == 0:
+            barridoK.append(numero)
 
     
     for parametroK in barridoK:
@@ -157,6 +161,9 @@ if __name__ == '__main__':
         
         # se balancean los datos (esto puede no interesarnos)
         clf.class_weight = "balanced"
+
+        # se imprimen los detalles sobre los hiperparámetros
+        print("experimento con " + "k = " + str(parametroK))
 
         # entrena el algoritmo para que, basándose en los datos de los features de X_train se cree una coincidencia con las labels de y_train
         clf.fit(X_train, Y_train)
