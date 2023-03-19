@@ -5,24 +5,33 @@ import pickle
 import sys
 import numpy as np
 import getopt
-from sklearn.metrics import f1_score
+import csv
+from sklearn.metrics import f1_score, precision_score, recall_score
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+
+# regenera el modelo para aplicarlo a datos nuevos
+def regenerar_modelo(nombre_modelo, fichero):
+    X_nuevo = pd.read_csv(fichero)
+    clf = pickle.load(open(nombre_modelo, 'rb'))
+    resultado = clf.predict(X_nuevo)
+    print(resultado)
 
 # ejecutar el código
 if __name__ == '__main__':
     print('ARGV   :',sys.argv[1:])
     try:
-        options,remainder = getopt.getopt(sys.argv[1:],'p:m:f:h:k:n:d:',['path=','model=','testFile=','h','k=','n=','d='])
+        options,remainder = getopt.getopt(sys.argv[1:],'u:m:f:h:n:k:p:r:',['u=','model=','testFile=','h','n=','k=','p=','r'])
     except getopt.GetoptError as err:
         print('ERROR:',err)
         sys.exit(1)
     print('OPTIONS   :',options)
 
     for opt,arg in options:
-        if opt in ('-p','--path'):
-            p = arg
+        if opt in ('-u','--ubicacion'):
+            u = arg
         elif opt in ('-f', '--file'):
             f = arg
         elif opt in ('-m', '--model'):
@@ -32,18 +41,22 @@ if __name__ == '__main__':
             exit(1)
         elif opt in ('-k','--kparameter'):
             k = int(arg)
-        elif opt in ('-n', '--dminparameter'):
-            pmin = int(arg)
-        elif opt in ('-d','--dparameter'):
-            d = int(arg)
+        elif opt in ('-n', '--kminparameter'):
+            kmin = int(arg)
+        elif opt in ('-p','--pparameter'):
+            p = int(arg)
+        elif opt in ('-r','--regenerate'):
+            r = int(arg)
 
-    if p == './':
+    if u == './':
         # model=p+str(m)
-        iFile = p+ str(f)
+        iFile = u+ str(f)
     else:
         # model=p+"/"+str(m)
-        iFile = p+"/" + str(f)
-
+        iFile = u+"/" + str(f)
+    
+    if not r == None:
+        regenerar_modelo(iFile, r)
 
     # función que tiene que ver con la codificación en utf-8
     def coerce_to_unicode(x):
@@ -143,57 +156,81 @@ if __name__ == '__main__':
 
     # primero llenamos un array con todos los valores posibles de k
     barridoK = []
-    for numero in range(k + 1):
+    for numero in range(kmin, k + 1):
         if numero == 0:
            pass # no ocurre nada, no se permite el valor 0
         elif not numero % 2 == 0:
             barridoK.append(numero)
 
+    # antes de realizar los experimentos vamos a crear un array para guardarlos
+    csv_experimentos = []
+    cabecera = ["Experimento", "Precision", "Recall", "F_Score(mac/mic/avg/none)"]
+    csv_experimentos.append(cabecera)
+
+    # creamos una tupla para guardar el mejor modelo con su f_score
+    mejor_modelo = (None, 0)
+
     # conjunto de bucles donde sucede el barrido de hiperparámetros.
     for parametroK in barridoK:
-        for parametroP in range(pmin, d+1):
+        for parametroP in range(1, p + 1):
+            for w in ["uniform", "distance"]:
 
-        # [HARDCODE] se crea el modelo con unos hiperparámetros predefinidos
-            from sklearn.neighbors import KNeighborsClassifier
-            clf = KNeighborsClassifier(n_neighbors=parametroK,
-                                weights='uniform',
-                                algorithm='auto',
-                                leaf_size=30,
-                                p=parametroP)
-            
-            # se balancean los datos (esto puede no interesarnos)
-            clf.class_weight = "balanced"
+                # se crea el modelo con los hiperparámetros seleccionados
+                clf = KNeighborsClassifier(n_neighbors=parametroK,
+                                    weights=w,
+                                    algorithm='auto',
+                                    leaf_size=30,
+                                    p=parametroP)
+                
+                # se balancean los datos (esto puede no interesarnos)
+                clf.class_weight = "balanced"
 
-            # se imprimen los detalles sobre los hiperparámetros
-            print("experimento con " + "k = " + str(parametroK) + ", p = " + str(parametroP))
+                # se imprimen los detalles sobre los hiperparámetros
+                print("experimento con " + "k = " + str(parametroK) + ", p = " + str(parametroP) + ", w = " + w)
 
-            # entrena el algoritmo para que, basándose en los datos de los features de X_train se cree una coincidencia con las labels de y_train
-            clf.fit(X_train, Y_train)
+                # entrena el algoritmo para que, basándose en los datos de los features de X_train se cree una coincidencia con las labels de y_train
+                clf.fit(X_train, Y_train)
 
-            # se realizan las predicciones
-            predictions = clf.predict(X_test)
-            probas = clf.predict_proba(X_test)
+                # se realizan las predicciones
+                predictions = clf.predict(X_test)
+                probas = clf.predict_proba(X_test)
 
-            predictions = pd.Series(data=predictions, index=X_test.index, name='predicted_value')
-            cols = [
-                u'probability_of_value_%s' % label
-                for (_, label) in sorted([(int(target_map[label]), label) for label in target_map])
-            ]
-            probabilities = pd.DataFrame(data=probas, index=X_test.index, columns=cols)
+                predictions = pd.Series(data=predictions, index=X_test.index, name='predicted_value')
+                cols = [
+                    u'probability_of_value_%s' % label
+                    for (_, label) in sorted([(int(target_map[label]), label) for label in target_map])
+                ]
+                probabilities = pd.DataFrame(data=probas, index=X_test.index, columns=cols)
 
-            # construir la evaluación de los resultados
-            results_test = X_test.join(predictions, how='left')
-            results_test = results_test.join(probabilities, how='left')
-            results_test = results_test.join(test['__target__'], how='left')
-            results_test = results_test.rename(columns= {'__target__': 'TARGET'})
+                # construir la evaluación de los resultados
+                results_test = X_test.join(predictions, how='left')
+                results_test = results_test.join(probabilities, how='left')
+                results_test = results_test.join(test['__target__'], how='left')
+                results_test = results_test.rename(columns= {'__target__': 'TARGET'})
 
-            i=0
-            for real,pred in zip(Y_test,predictions):
-                print(real,pred)
-                i+=1
-                if i>5:
-                    break
+                i=0
+                for real,pred in zip(Y_test,predictions):
+                    print(real,pred)
+                    i+=1
+                    if i>5:
+                        break
+                
+                csv_experimentos.append(["k=" + str(parametroK) + ",p=" + str(parametroP) + "," + str(w), str(precision_score(Y_test, predictions, average='micro')), str(recall_score(Y_test, predictions, average='micro')), str(f1_score(Y_test, predictions, average='micro'))])
+                print(f1_score(Y_test, predictions, average='micro'))
+                print(classification_report(Y_test,predictions))
+                print(confusion_matrix(Y_test, predictions, labels=[1,0]))
 
-            print(f1_score(Y_test, predictions, average=None))
-            print(classification_report(Y_test,predictions))
-            print(confusion_matrix(Y_test, predictions, labels=[1,0]))
+                # guardamos el modelo en una variable siempre y cuando éste sea mejor que el anterior
+                if f1_score(Y_test, predictions, average='micro') > mejor_modelo[1]:
+                    mejor_modelo = (clf, f1_score(Y_test, predictions, average='micro'))
+    
+    # vamos a crear un archivo .csv con todos los experimentos.
+    with open("experimentos.csv", "w", newline="") as archivo:
+        escritor = csv.writer(archivo)
+        for fila in csv_experimentos:
+            escritor.writerow(fila)
+
+    # se guarda el mejor modelo usando pickle
+    nombre_modelo = "mejormodelo.sav"
+    saved_model = pickle.dump(mejor_modelo[0], open(nombre_modelo, "wb"))
+    print('se ha guardado el modelo')
