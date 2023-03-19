@@ -37,14 +37,15 @@ if __name__ == '__main__':
         elif opt in ('-m', '--model'):
             m = arg
         elif opt in ('-h','--help'):
-            print(' -p testFilePath \n -m modelName \n -f testFileName \n -k firstParameter(K in KNN) \n -d secondParameter(D in DecisionTree) \n ')
+            print(' -u testFilePath \n -m modelName \n -f testFileName \n -k parámetros del modelo \n ')
             exit(1)
-        elif opt in ('-k','--kparameter'):
-            k = int(arg)
-        elif opt in ('-n', '--kminparameter'):
-            kmin = int(arg)
-        elif opt in ('-p','--pparameter'):
-            p = int(arg)
+        elif opt in ('-k','--hiperparameters'):  # recoge los hiperparámetros en un orden específico separados sólo por comas (sin espacios)
+            hiperparametros = arg.split(",")
+            w = []
+            kmin = int(hiperparametros[0])  # número mínimo de vecinos
+            k = int(hiperparametros[1])  # número máximo de vecinos
+            p = int(hiperparametros[2])  # número máximo del parámetro "p"
+            w.append(hiperparametros[3])  # peso de los votos de los vecinos
         elif opt in ('-r','--regenerate'):
             r = int(arg)
 
@@ -55,8 +56,8 @@ if __name__ == '__main__':
         # model=p+"/"+str(m)
         iFile = u+"/" + str(f)
     
-    if not r == None:
-        regenerar_modelo(iFile, r)
+    #if not r == None:
+        #regenerar_modelo(iFile, r)
 
     # función que tiene que ver con la codificación en utf-8
     def coerce_to_unicode(x):
@@ -173,11 +174,13 @@ if __name__ == '__main__':
     # conjunto de bucles donde sucede el barrido de hiperparámetros.
     for parametroK in barridoK:
         for parametroP in range(1, p + 1):
-            for w in ["uniform", "distance"]:
+            if w[0] == "ambos":
+                w = ["uniform", "distance"]
+            for parametroW in w:
 
                 # se crea el modelo con los hiperparámetros seleccionados
                 clf = KNeighborsClassifier(n_neighbors=parametroK,
-                                    weights=w,
+                                    weights=parametroW,
                                     algorithm='auto',
                                     leaf_size=30,
                                     p=parametroP)
@@ -186,7 +189,7 @@ if __name__ == '__main__':
                 clf.class_weight = "balanced"
 
                 # se imprimen los detalles sobre los hiperparámetros
-                print("experimento con " + "k = " + str(parametroK) + ", p = " + str(parametroP) + ", w = " + w)
+                print("experimento con " + "k = " + str(parametroK) + ", p = " + str(parametroP) + ", w = " + parametroW)
 
                 # entrena el algoritmo para que, basándose en los datos de los features de X_train se cree una coincidencia con las labels de y_train
                 clf.fit(X_train, Y_train)
