@@ -12,18 +12,38 @@ from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 
-# regenera el modelo para aplicarlo a datos nuevos
+#####################################################
+#                   FUNCIONES                       #
+#####################################################
+
+# regenerar el modelo para aplicarlo a datos nuevos
 def regenerar_modelo(nombre_modelo, fichero):
     X_nuevo = pd.read_csv(fichero)
     clf = pickle.load(open(nombre_modelo, 'rb'))
     resultado = clf.predict(X_nuevo)
     print(resultado)
+    exit(0)
+
+
+# función relacionada con la codificación en utf-8
+def coerce_to_unicode(x):
+    if sys.version_info < (3, 0):
+        if isinstance(x, str):
+            return unicode(x, 'utf-8')
+        else:
+            return unicode(x)
+    else:
+        return str(x)
+
+#####################################################
+#                   CÓDIGO PRINCIPAL                #
+#####################################################
 
 # ejecutar el código
 if __name__ == '__main__':
     print('ARGV   :',sys.argv[1:])
     try:
-        options,remainder = getopt.getopt(sys.argv[1:],'u:m:f:h:n:k:p:r:',['u=','model=','testFile=','h','n=','k=','p=','r'])
+        options,remainder = getopt.getopt(sys.argv[1:],'u:m:f:h:n:k:p:',['u=','model=','testFile=','h','k='])
     except getopt.GetoptError as err:
         print('ERROR:',err)
         sys.exit(1)
@@ -46,28 +66,17 @@ if __name__ == '__main__':
             k = int(hiperparametros[1])  # número máximo de vecinos
             p = int(hiperparametros[2])  # número máximo del parámetro "p"
             w.append(hiperparametros[3])  # peso de los votos de los vecinos
-        elif opt in ('-r','--regenerate'):
-            r = int(arg)
 
     if u == './':
-        # model=p+str(m)
         iFile = u+ str(f)
+        if 'm' in locals():
+            modelo = u+str(m)
+            regenerar_modelo(modelo, iFile)
     else:
-        # model=p+"/"+str(m)
         iFile = u+"/" + str(f)
-    
-    #if not r == None:
-        #regenerar_modelo(iFile, r)
-
-    # función que tiene que ver con la codificación en utf-8
-    def coerce_to_unicode(x):
-        if sys.version_info < (3, 0):
-            if isinstance(x, str):
-                return unicode(x, 'utf-8')
-            else:
-                return unicode(x)
-        else:
-            return str(x)
+        if 'm' in locals():
+            modelo = u+"/"+str(m)
+            regenerar_modelo(modelo, iFile)
         
     # abrir el fichero .csv y cargarlo en un dataframe de pandas
     ml_dataset = pd.read_csv(iFile)
