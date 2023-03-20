@@ -13,9 +13,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 
-#####################################################
-#                   FUNCIONES                       #
-#####################################################
+#FUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNC
+#                   FUNCIONES                       F
+#FUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNC
 
 # guardar modelo en el directorio de trabajo
 def guardar_modelo(mejor_modelo):
@@ -52,9 +52,9 @@ def coerce_to_unicode(x):
     else:
         return str(x)
 
-#####################################################
-#                   CÓDIGO PRINCIPAL                #
-#####################################################
+#CODECODECODECODECODECODECODECODECODECODECODECODECODE
+#                   CÓDIGO PRINCIPAL                C
+#CODECODECODECODECODECODECODECODECODECODECODECODECODE
 
 # ejecutar el código
 if __name__ == '__main__':
@@ -356,7 +356,7 @@ if __name__ == '__main__':
                     if i>5:
                         break
                 
-                datos_experimentos.append(["max_depth=" + str(parametroMaxD) + str(min_s) + "," + str(w), str(precision_score(Y_test, predictions, average='micro')), str(recall_score(Y_test, predictions, average='micro')), str(f1_score(Y_test, predictions, average='micro'))])
+                datos_experimentos.append(["max_depth=" + str(parametroMaxD) + "," + str(min_s) + ",msx_value=" + str(parametroValorMinS), str(precision_score(Y_test, predictions, average='micro')), str(recall_score(Y_test, predictions, average='micro')), str(f1_score(Y_test, predictions, average='micro'))])
                 print(f1_score(Y_test, predictions, average='micro'))
                 print(classification_report(Y_test,predictions))
                 print(confusion_matrix(Y_test, predictions, labels=[1,0]))
