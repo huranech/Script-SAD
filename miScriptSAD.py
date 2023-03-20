@@ -11,10 +11,19 @@ from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
 
 #####################################################
 #                   FUNCIONES                       #
 #####################################################
+
+# guardar modelo en el directorio de trabajo
+def guardar_modelo(mejor_modelo):
+    print("el mejor modelo tiene un f_score de: " + str(mejor_modelo[1]))
+    nombre_modelo = "mejormodelo.sav"
+    saved_model = pickle.dump(mejor_modelo[0], open(nombre_modelo, "wb"))
+    print('se ha guardado el modelo')
+
 
 # regenerar el modelo para aplicarlo a datos nuevos
 def regenerar_modelo(nombre_modelo, fichero):
@@ -23,6 +32,14 @@ def regenerar_modelo(nombre_modelo, fichero):
     resultado = clf.predict(X_nuevo)
     print(resultado)
     exit(0)
+
+
+# crea un .csv con los datos de todos los experimentos
+def csv_experimentos(datos_experimentos):
+    with open("experimentos.csv", "w", newline="") as archivo:
+        escritor = csv.writer(archivo)
+        for fila in datos_experimentos:
+            escritor.writerow(fila)
 
 
 # función relacionada con la codificación en utf-8
@@ -43,7 +60,7 @@ def coerce_to_unicode(x):
 if __name__ == '__main__':
     print('ARGV   :',sys.argv[1:])
     try:
-        options,remainder = getopt.getopt(sys.argv[1:],'u:m:f:h:n:k:p:',['u=','model=','testFile=','h','k='])
+        options,remainder = getopt.getopt(sys.argv[1:],'u:m:f:h:a:k:',['u=','model=','testFile=','h','a=','k='])
     except getopt.GetoptError as err:
         print('ERROR:',err)
         sys.exit(1)
@@ -59,13 +76,28 @@ if __name__ == '__main__':
         elif opt in ('-h','--help'):
             print(' -u testFilePath \n -m modelName \n -f testFileName \n -k parámetros del modelo \n ')
             exit(1)
+        elif opt in ('-a', '--algorithm'):
+            if arg not in ["knn", "decisiontree"]:
+                print("el argumento -a debe ser knn, decisiontree o ambos")
+                exit(0)
+            else:
+                a = arg
         elif opt in ('-k','--hiperparameters'):  # recoge los hiperparámetros en un orden específico separados sólo por comas (sin espacios)
             hiperparametros = arg.split(",")
-            w = []
-            kmin = int(hiperparametros[0])  # número mínimo de vecinos
-            k = int(hiperparametros[1])  # número máximo de vecinos
-            p = int(hiperparametros[2])  # número máximo del parámetro "p"
-            w.append(hiperparametros[3])  # peso de los votos de los vecinos
+            if a == "knn":
+                w = []
+                kmin = int(hiperparametros[0])  # número mínimo de vecinos
+                k = int(hiperparametros[1])  # número máximo de vecinos
+                p = int(hiperparametros[2])  # número máximo del parámetro "p"
+                w.append(hiperparametros[3])  # peso de los votos de los vecinos
+            elif a == "decisiontree":
+                valor_min_s = []
+                max_d = int(hiperparametros[0])  # max_depth
+                min_s = hiperparametros[1]  # "min_sample_split" ó "min_sample_leaf" ó "ambos"
+                if hiperparametros[2] == "3":  # valor de min_sample_X (1, 2 ó 3; donde el 3 indica 1 y 2)
+                    valor_min_s = [1, 2]
+                else:
+                    valor_min_s.append(int(hiperparametros[2]))
 
     if u == './':
         iFile = u+ str(f)
@@ -164,41 +196,138 @@ if __name__ == '__main__':
     Y_train = np.array(train['__target__'])
     Y_test = np.array(test['__target__'])
 
-    # primero llenamos un array con todos los valores posibles de k
-    barridoK = []
-    for numero in range(kmin, k + 1):
-        if numero == 0:
-           pass # no ocurre nada, no se permite el valor 0
-        elif not numero % 2 == 0:
-            barridoK.append(numero)
+#kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+#                   ALGORITMO KNN                   k
+#kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 
-    # antes de realizar los experimentos vamos a crear un array para guardarlos
-    csv_experimentos = []
-    cabecera = ["Experimento", "Precision", "Recall", "F_Score(mac/mic/avg/none)"]
-    csv_experimentos.append(cabecera)
+    if a == "knn":
+        # antes de realizar los experimentos vamos a crear un array para guardarlos
+        datos_experimentos = []
+        cabecera = ["Experimento", "Precision", "Recall", "F_Score(mac/mic/avg/none)"]
+        datos_experimentos.append(cabecera)
 
-    # creamos una tupla para guardar el mejor modelo con su f_score
-    mejor_modelo = (None, 0)
+        # creamos una tupla para guardar el mejor modelo con su f_score
+        mejor_modelo = (None, 0)
 
-    # conjunto de bucles donde sucede el barrido de hiperparámetros.
-    for parametroK in barridoK:
-        for parametroP in range(1, p + 1):
-            if w[0] == "ambos":
-                w = ["uniform", "distance"]
-            for parametroW in w:
+        # primero llenamos un array con todos los valores posibles de k
+        barridoK = []
+        for numero in range(kmin, k + 1):
+            if numero == 0:
+                pass # no ocurre nada, no se permite el valor 0
+            elif not numero % 2 == 0:
+                barridoK.append(numero)
 
-                # se crea el modelo con los hiperparámetros seleccionados
-                clf = KNeighborsClassifier(n_neighbors=parametroK,
-                                    weights=parametroW,
-                                    algorithm='auto',
-                                    leaf_size=30,
-                                    p=parametroP)
-                
+        # conjunto de bucles donde sucede el barrido de hiperparámetros.
+        for parametroK in barridoK:
+            for parametroP in range(1, p + 1):
+                if w[0] == "ambos":
+                    w = ["uniform", "distance"]
+                for parametroW in w:
+
+                    # se crea el modelo con los hiperparámetros seleccionados
+                    clf = KNeighborsClassifier(n_neighbors=parametroK,
+                                        weights=parametroW,
+                                        algorithm='auto',
+                                        leaf_size=30,
+                                        p=parametroP)
+                    
+                    # se balancean los datos (esto puede no interesarnos)
+                    clf.class_weight = "balanced"
+
+                    # se imprimen los detalles sobre los hiperparámetros
+                    print("experimento con " + "k = " + str(parametroK) + ", p = " + str(parametroP) + ", w = " + parametroW)
+
+                    # entrena el algoritmo para que, basándose en los datos de los features de X_train se cree una coincidencia con las labels de y_train
+                    clf.fit(X_train, Y_train)
+
+                    # se realizan las predicciones
+                    predictions = clf.predict(X_test)
+                    probas = clf.predict_proba(X_test)
+
+                    predictions = pd.Series(data=predictions, index=X_test.index, name='predicted_value')
+                    cols = [
+                        u'probability_of_value_%s' % label
+                        for (_, label) in sorted([(int(target_map[label]), label) for label in target_map])
+                    ]
+                    probabilities = pd.DataFrame(data=probas, index=X_test.index, columns=cols)
+
+                    # construir la evaluación de los resultados
+                    results_test = X_test.join(predictions, how='left')
+                    results_test = results_test.join(probabilities, how='left')
+                    results_test = results_test.join(test['__target__'], how='left')
+                    results_test = results_test.rename(columns= {'__target__': 'TARGET'})
+
+                    i=0
+                    for real,pred in zip(Y_test,predictions):
+                        print(real,pred)
+                        i+=1
+                        if i>5:
+                            break
+                    
+                    datos_experimentos.append(["k=" + str(parametroK) + ",p=" + str(parametroP) + "," + str(w), str(precision_score(Y_test, predictions, average='micro')), str(recall_score(Y_test, predictions, average='micro')), str(f1_score(Y_test, predictions, average='micro'))])
+                    print(f1_score(Y_test, predictions, average='micro'))
+                    print(classification_report(Y_test,predictions))
+                    print(confusion_matrix(Y_test, predictions, labels=[1,0]))
+
+                    # guardamos el modelo en una variable siempre y cuando éste sea mejor que el anterior
+                    if f1_score(Y_test, predictions, average='micro') > mejor_modelo[1]:
+                        mejor_modelo = (clf, f1_score(Y_test, predictions, average='micro'))
+        
+        # creamos un archivo .csv con todos los experimentos.
+        csv_experimentos(datos_experimentos)
+
+        # se guarda el mejor modelo usando pickle
+        guardar_modelo(mejor_modelo)
+
+#ºººººººººººººººººººººººººººººººººººººººººººººººººººº
+#                   DECISION TREE                   º
+#ºººººººººººººººººººººººººººººººººººººººººººººººººººº
+    elif a == "decisiontree":
+
+        # antes de realizar los experimentos vamos a crear un array para guardarlos
+        datos_experimentos = []
+        cabecera = ["Experimento", "Precision", "Recall", "F_Score(mac/mic/avg/none)"]
+        datos_experimentos.append(cabecera)
+
+        # creamos una tupla para guardar el mejor modelo con su f_score
+        mejor_modelo = (None, 0)
+
+        # guardamos los max_depth impares entre dos números en un array
+        barridoMaxD = []
+        for numero in range(1, max_d + 1):
+            if not numero % 2 == 0:
+                barridoMaxD.append(numero)
+
+        # conjunto de bucles propio del barrido de hiperparámetros
+        for parametroMaxD in barridoMaxD:
+            for parametroValorMinS in valor_min_s:
+                if min_s == "min_samples_leaf":
+                    clf = DecisionTreeClassifier(
+                                        random_state = 1337,
+                                        criterion = 'gini',
+                                        splitter = 'best',
+                                        max_depth = parametroMaxD,
+                                        min_samples_leaf = parametroValorMinS)
+                elif min_s == "min_samples_split":
+                    clf = DecisionTreeClassifier(
+                                        random_state = 1337,
+                                        criterion = 'gini',
+                                        splitter = 'best',
+                                        max_depth = parametroMaxD,
+                                        min_samples_split = parametroValorMinS)
+                elif min_s == "ambos":
+                    clf = DecisionTreeClassifier(
+                                        random_state = 1337,
+                                        criterion = 'gini',
+                                        splitter = 'best',
+                                        max_depth = parametroMaxD,
+                                        min_samples_split = parametroValorMinS)
+
                 # se balancean los datos (esto puede no interesarnos)
                 clf.class_weight = "balanced"
 
                 # se imprimen los detalles sobre los hiperparámetros
-                print("experimento con " + "k = " + str(parametroK) + ", p = " + str(parametroP) + ", w = " + parametroW)
+                print("experimento con " + "max_depth = " + str(parametroMaxD) + ", msx = " + min_s + ", msx_value = " + str(parametroValorMinS))
 
                 # entrena el algoritmo para que, basándose en los datos de los features de X_train se cree una coincidencia con las labels de y_train
                 clf.fit(X_train, Y_train)
@@ -227,7 +356,7 @@ if __name__ == '__main__':
                     if i>5:
                         break
                 
-                csv_experimentos.append(["k=" + str(parametroK) + ",p=" + str(parametroP) + "," + str(w), str(precision_score(Y_test, predictions, average='micro')), str(recall_score(Y_test, predictions, average='micro')), str(f1_score(Y_test, predictions, average='micro'))])
+                datos_experimentos.append(["max_depth=" + str(parametroMaxD) + str(min_s) + "," + str(w), str(precision_score(Y_test, predictions, average='micro')), str(recall_score(Y_test, predictions, average='micro')), str(f1_score(Y_test, predictions, average='micro'))])
                 print(f1_score(Y_test, predictions, average='micro'))
                 print(classification_report(Y_test,predictions))
                 print(confusion_matrix(Y_test, predictions, labels=[1,0]))
@@ -235,14 +364,9 @@ if __name__ == '__main__':
                 # guardamos el modelo en una variable siempre y cuando éste sea mejor que el anterior
                 if f1_score(Y_test, predictions, average='micro') > mejor_modelo[1]:
                     mejor_modelo = (clf, f1_score(Y_test, predictions, average='micro'))
-    
-    # vamos a crear un archivo .csv con todos los experimentos.
-    with open("experimentos.csv", "w", newline="") as archivo:
-        escritor = csv.writer(archivo)
-        for fila in csv_experimentos:
-            escritor.writerow(fila)
 
-    # se guarda el mejor modelo usando pickle
-    nombre_modelo = "mejormodelo.sav"
-    saved_model = pickle.dump(mejor_modelo[0], open(nombre_modelo, "wb"))
-    print('se ha guardado el modelo')
+        # creamos un archivo .csv con todos los experimentos.
+        csv_experimentos(datos_experimentos)
+
+        # se guarda el mejor modelo usando pickle
+        guardar_modelo(mejor_modelo)
