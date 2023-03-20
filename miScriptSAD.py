@@ -133,6 +133,7 @@ if __name__ == '__main__':
     
     # [HARDCODE] creamos la columna TARGET con los valores
     target_map = {'Iris-versicolor': 0, 'Iris-virginica': 1, 'Iris-setosa': 2}
+    print(target_map)
     ml_dataset['__target__'] = ml_dataset['Especie'].map(str).map(target_map)
     del ml_dataset['Especie']
 
