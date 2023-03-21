@@ -112,9 +112,8 @@ if __name__ == '__main__':
         
     # abrir el fichero .csv y cargarlo en un dataframe de pandas
     ml_dataset = pd.read_csv(iFile)
-
     # [HARDCODE] seleccionar únicamente los features que nos interesan 
-    ml_dataset = ml_dataset[['Especie', 'Ancho de sepalo', 'Largo de sepalo', 'Largo de petalo', 'Ancho de petalo']]
+    ml_dataset = ml_dataset[['Especie', 'Largo de sepalo', 'Ancho de sepalo', 'Largo de petalo', 'Ancho de petalo']]
 
     # [HARDCODE] pasamos los valores categoriales y de texto a unicode y los numéricos a float
     categorical_features = []
@@ -146,7 +145,7 @@ if __name__ == '__main__':
 
     # [HARDCODE] se escoge la forma en la que se van a tratar los valores faltantes
     drop_rows_when_missing = []
-    impute_when_missing = [{'feature': 'Ancho de sepalo', 'impute_with': 'MEAN'}, {'feature': 'Largo de sepalo', 'impute_with': 'MEAN'}, {'feature': 'Largo de petalo', 'impute_with': 'MEAN'}, {'feature': 'Ancho de petalo', 'impute_with': 'MEAN'}]
+    impute_when_missing = [{'feature': 'Largo de sepalo', 'impute_with': 'MEAN'}, {'feature': 'Ancho de sepalo', 'impute_with': 'MEAN'}, {'feature': 'Largo de petalo', 'impute_with': 'MEAN'}, {'feature': 'Ancho de petalo', 'impute_with': 'MEAN'}]
 
     # se borran las filas donde hay datos faltantes para las features en 'drop_rows_when_missing'
     for feature in drop_rows_when_missing:
@@ -171,7 +170,7 @@ if __name__ == '__main__':
         print ('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
 
     # se reescalan los valores de las features con una media de 0 y una desviación estándar de 1
-    rescale_features = {'Ancho de sepalo': 'AVGSTD', 'Largo de sepalo': 'AVGSTD', 'Largo de petalo': 'AVGSTD', 'Ancho de petalo': 'AVGSTD'}
+    rescale_features = {'Largo de sepalo': 'AVGSTD', 'Ancho de sepalo': 'AVGSTD', 'Largo de petalo': 'AVGSTD', 'Ancho de petalo': 'AVGSTD'}
     for (feature_name, rescale_method) in rescale_features.items():
         if rescale_method == 'MINMAX':
             _min = train[feature_name].min()
