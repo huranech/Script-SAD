@@ -28,6 +28,23 @@ def guardar_modelo(mejor_modelo):
 # regenerar el modelo para aplicarlo a datos nuevos
 def regenerar_modelo(nombre_modelo, fichero):
     X_nuevo = pd.read_csv(fichero)
+    # se reescalan los valores de las features con una media de 0 y una desviación estándar de 1
+    rescale_features = {'Largo de sepalo': 'AVGSTD', 'Ancho de sepalo': 'AVGSTD', 'Largo de petalo': 'AVGSTD', 'Ancho de petalo': 'AVGSTD'}
+    for (feature_name, rescale_method) in rescale_features.items():
+        if rescale_method == 'MINMAX':
+            _min = X_nuevo[feature_name].min()
+            _max = X_nuevo[feature_name].max()
+            scale = _max - _min
+            shift = _min
+        else:
+            shift = X_nuevo[feature_name].mean()
+            scale = X_nuevo[feature_name].std()
+        if scale == 0.:
+            del X_nuevo[feature_name]
+            print ('Feature %s was dropped because it has no variance' % feature_name)
+        else:
+            print ('Rescaled %s' % feature_name)
+            X_nuevo[feature_name] = (X_nuevo[feature_name] - shift).astype(np.float64) / scale
     clf = pickle.load(open(nombre_modelo, 'rb'))
     resultado = clf.predict(X_nuevo)
     print(resultado)
@@ -193,7 +210,7 @@ if __name__ == '__main__':
     X_train = train.drop('__target__', axis=1)
     X_test = test.drop('__target__', axis=1)
 
-    Y_train = np.array(train['__target__'])
+    Y_train = np.array(train['__target__'])    
     Y_test = np.array(test['__target__'])
 
 #kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
