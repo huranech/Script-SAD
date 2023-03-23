@@ -18,6 +18,12 @@ from sklearn.tree import DecisionTreeClassifier
 #FUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNC
 
 # guardar modelo en el directorio de trabajo
+def obt_features(file):
+    datos = pd.read_csv(file)
+    cabeceras = datos.columns.tolist()
+    return cabeceras
+
+
 def guardar_modelo(mejor_modelo):
     print("el mejor modelo tiene un f_score de: " + str(mejor_modelo[1]))
     nombre_modelo = "mejormodelo.sav"
@@ -132,6 +138,8 @@ if __name__ == '__main__':
                     valor_min_s = [1, 2]
                 else:
                     valor_min_s.append(int(hiperparametros[2]))
+        elif opt in ('-t', '--target'):
+            target = arg
 
     if u == './':
         iFile = u+ str(f)
@@ -146,8 +154,10 @@ if __name__ == '__main__':
         
     # abrir el fichero .csv y cargarlo en un dataframe de pandas
     ml_dataset = pd.read_csv(iFile)
-    # [HARDCODE] seleccionar únicamente los features que nos interesan 
-    ml_dataset = ml_dataset[['Especie', 'Largo de sepalo', 'Ancho de sepalo', 'Largo de petalo', 'Ancho de petalo']]
+    # recopilar los nombres de las features y la clase
+    nombres_cabeceras = obt_features(iFile)
+    # seleccionar únicamente los features que nos interesan (se pueden quitar algunas features) 
+    ml_dataset = ml_dataset[nombres_cabeceras]
 
     # [HARDCODE] pasamos los valores categoriales y de texto a unicode y los numéricos a float
     categorical_features = []
@@ -164,11 +174,11 @@ if __name__ == '__main__':
         else:
             ml_dataset[feature] = ml_dataset[feature].astype('double')
     
-    # [HARDCODE] creamos la columna TARGET con los valores
+    # [HARDCODE] cambiar los valores del target_map
     target_map = {'Iris-versicolor': 0, 'Iris-virginica': 1, 'Iris-setosa': 2}
     print(target_map)
-    ml_dataset['__target__'] = ml_dataset['Especie'].map(str).map(target_map)
-    del ml_dataset['Especie']
+    ml_dataset['__target__'] = ml_dataset[target].map(str).map(target_map)
+    del ml_dataset[target]
 
     # se eliminan las filas para las que el TARGET es null / se pasan los datos que fueran float a Integer
     ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
@@ -265,8 +275,8 @@ if __name__ == '__main__':
                                         leaf_size=30,
                                         p=parametroP)
                     
-                    # se balancean los datos (esto puede no interesarnos)
-                    clf.class_weight = "balanced"
+                    # se establece el peso de cada clase
+                    clf.class_weight = "balanced"  # none / balanced
 
                     # se imprimen los detalles sobre los hiperparámetros
                     print("experimento con " + "k = " + str(parametroK) + ", p = " + str(parametroP) + ", w = " + parametroW)
@@ -349,7 +359,7 @@ if __name__ == '__main__':
                                         splitter = 'best',
                                         max_depth = parametroMaxD,
                                         min_samples_split = parametroValorMinS)
-                elif min_s == "ambos":
+                elif min_s == "ambos":  # no :(
                     clf = DecisionTreeClassifier(
                                         random_state = 1337,
                                         criterion = 'gini',
@@ -357,8 +367,8 @@ if __name__ == '__main__':
                                         max_depth = parametroMaxD,
                                         min_samples_split = parametroValorMinS)
 
-                # se balancean los datos (esto puede no interesarnos)
-                clf.class_weight = "balanced"
+                # se establece el peso de cada clase
+                clf.class_weight = "balanced"  # none / balanced
 
                 # se imprimen los detalles sobre los hiperparámetros
                 print("experimento con " + "max_depth = " + str(parametroMaxD) + ", msx = " + min_s + ", msx_value = " + str(parametroValorMinS))
