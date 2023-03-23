@@ -35,7 +35,13 @@ def guardar_modelo(mejor_modelo):
 def regenerar_modelo(nombre_modelo, fichero):
     X_nuevo = pd.read_csv(fichero)
     # [HARDCODE] se reescalan los valores de las features con una media de 0 y una desviación estándar de 1
-    rescale_features = {'Largo de sepalo': 'AVGSTD', 'Ancho de sepalo': 'AVGSTD', 'Largo de petalo': 'AVGSTD', 'Ancho de petalo': 'AVGSTD'}
+    rescale_features = {'Area': 'AVGSTD', 
+                        'Perimeter': 'AVGSTD', 
+                        'Compactness': 'AVGSTD', 
+                        'kernelLength': 'AVGSTD',
+                        'KernelWidth': 'AVGSTD',
+                        'AsymmetryCoeff': 'AVGSTD',
+                        'KernelGrooveLength': 'AVGSTD'}
     for (feature_name, rescale_method) in rescale_features.items():
         if rescale_method == 'MINMAX':
             _min = X_nuevo[feature_name].min()
@@ -158,10 +164,11 @@ if __name__ == '__main__':
     nombres_cabeceras = obt_features(iFile)
     # seleccionar únicamente los features que nos interesan (se pueden quitar algunas features) 
     ml_dataset = ml_dataset[nombres_cabeceras]
+    features = list(filter(lambda x: x != target, ml_dataset))
 
     # [HARDCODE] pasamos los valores categoriales y de texto a unicode y los numéricos a float
     categorical_features = []
-    numerical_features = ['Ancho de sepalo', 'Largo de sepalo', 'Largo de petalo', 'Ancho de petalo']
+    numerical_features = features
     text_features = []
 
     for feature in categorical_features:  # valores categoriales
@@ -175,10 +182,12 @@ if __name__ == '__main__':
             ml_dataset[feature] = ml_dataset[feature].astype('double')
     
     # [HARDCODE] cambiar los valores del target_map
-    target_map = {'Iris-versicolor': 0, 'Iris-virginica': 1, 'Iris-setosa': 2}
+    target_map = {'1': 1, '2': 2, '3': 3}
     print(target_map)
+    print(ml_dataset[target].map(str))
     ml_dataset['__target__'] = ml_dataset[target].map(str).map(target_map)
     del ml_dataset[target]
+    print(ml_dataset['__target__'])
 
     # se eliminan las filas para las que el TARGET es null / se pasan los datos que fueran float a Integer
     ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
@@ -189,7 +198,13 @@ if __name__ == '__main__':
 
     # [HARDCODE] se escoge la forma en la que se van a tratar los valores faltantes
     drop_rows_when_missing = []
-    impute_when_missing = [{'feature': 'Largo de sepalo', 'impute_with': 'MEAN'}, {'feature': 'Ancho de sepalo', 'impute_with': 'MEAN'}, {'feature': 'Largo de petalo', 'impute_with': 'MEAN'}, {'feature': 'Ancho de petalo', 'impute_with': 'MEAN'}]
+    impute_when_missing = [{'feature': 'Area', 'impute_with': 'MEAN'},
+                            {'feature': 'Perimeter', 'impute_with': 'MEAN'}, 
+                            {'feature': 'Compactness', 'impute_with': 'MEAN'}, 
+                            {'feature': 'kernelLength', 'impute_with': 'MEAN'},
+                            {'feature': 'KernelWidth', 'impute_with': 'MEAN'},
+                            {'feature': 'AsymmetryCoeff', 'impute_with': 'MEAN'},
+                            {'feature': 'KernelGrooveLength', 'impute_with': 'MEAN'}]
 
     # se borran las filas donde hay datos faltantes para las features en 'drop_rows_when_missing'
     for feature in drop_rows_when_missing:
@@ -214,7 +229,13 @@ if __name__ == '__main__':
         print ('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
 
     # se reescalan los valores de las features con una media de 0 y una desviación estándar de 1
-    rescale_features = {'Largo de sepalo': 'AVGSTD', 'Ancho de sepalo': 'AVGSTD', 'Largo de petalo': 'AVGSTD', 'Ancho de petalo': 'AVGSTD'}
+    rescale_features = {'Area': 'AVGSTD', 
+                        'Perimeter': 'AVGSTD', 
+                        'Compactness': 'AVGSTD', 
+                        'kernelLength': 'AVGSTD',
+                        'KernelWidth': 'AVGSTD',
+                        'AsymmetryCoeff': 'AVGSTD',
+                        'KernelGrooveLength': 'AVGSTD'}
     for (feature_name, rescale_method) in rescale_features.items():
         if rescale_method == 'MINMAX':
             _min = train[feature_name].min()
