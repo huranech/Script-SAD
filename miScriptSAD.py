@@ -12,6 +12,8 @@ from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
+from imblearn.over_sampling import RandomOverSampler
+from imblearn.under_sampling import RandomUnderSampler
 
 #FUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNC
 #                   FUNCIONES                       F
@@ -34,14 +36,54 @@ def guardar_modelo(mejor_modelo):
 # regenerar el modelo para aplicarlo a datos nuevos
 def regenerar_modelo(nombre_modelo, fichero):
     X_nuevo = pd.read_csv(fichero)
+    features = X_nuevo.columns.tolist()
+
+    # pasamos los valores categoriales y de texto a unicode y los numéricos a float
+    categorical_features = []
+    numerical_features = features
+    text_features = []
+
+    for feature in categorical_features:  # valores categoriales
+        X_nuevo[feature] = X_nuevo[feature].apply(coerce_to_unicode)
+    for feature in text_features:  # valores de tipo texto
+        X_nuevo[feature] = X_nuevo[feature].apply(coerce_to_unicode)
+    for feature in numerical_features:  # valores numéricos
+        if X_nuevo[feature].dtype == np.dtype('M8[ns]') or (hasattr(X_nuevo[feature].dtype, 'base') and X_nuevo[feature].dtype.base == np.dtype('M8[ns]')):
+            X_nuevo[feature] = datetime_to_epoch(X_nuevo[feature])
+        else:
+            X_nuevo[feature] = X_nuevo[feature].astype('double')
+    
+    # [HARDCODE] se imputan valores faltantes
+    drop_rows_when_missing = []
+    impute_when_missing = [{'feature': 'Largo de sepalo', 'impute_with': 'MEAN'},
+                            {'feature': 'Ancho de sepalo', 'impute_with': 'MEAN'}, 
+                            {'feature': 'Largo de petalo', 'impute_with': 'MEAN'}, 
+                            {'feature': 'Ancho de petalo', 'impute_with': 'MEAN'}]
+    
+    for feature in drop_rows_when_missing:
+        train = train[train[feature].notnull()]
+        test = test[test[feature].notnull()]
+        print ('Dropped missing records in %s' % feature)
+    
+    for feature in impute_when_missing:
+        if feature['impute_with'] == 'MEAN':
+            v = X_nuevo[feature['feature']].mean()
+        elif feature['impute_with'] == 'MEDIAN':
+            v = X_nuevo[feature['feature']].median()
+        elif feature['impute_with'] == 'CREATE_CATEGORY':
+            v = 'NULL_CATEGORY'
+        elif feature['impute_with'] == 'MODE':
+            v = X_nuevo[feature['feature']].value_counts().index[0]
+        elif feature['impute_with'] == 'CONSTANT':
+            v = feature['value']
+        X_nuevo[feature['feature']] = X_nuevo[feature['feature']].fillna(v)
+        print ('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
+
     # [HARDCODE] se reescalan los valores de las features con una media de 0 y una desviación estándar de 1
-    rescale_features = {'Area': 'AVGSTD', 
-                        'Perimeter': 'AVGSTD', 
-                        'Compactness': 'AVGSTD', 
-                        'kernelLength': 'AVGSTD',
-                        'KernelWidth': 'AVGSTD',
-                        'AsymmetryCoeff': 'AVGSTD',
-                        'KernelGrooveLength': 'AVGSTD'}
+    rescale_features = {'Largo de sepalo': 'AVGSTD', 
+                        'Ancho de sepalo': 'AVGSTD', 
+                        'Largo de petalo': 'AVGSTD', 
+                        'Ancho de petalo': 'AVGSTD'}
     for (feature_name, rescale_method) in rescale_features.items():
         if rescale_method == 'MINMAX':
             _min = X_nuevo[feature_name].min()
@@ -115,8 +157,8 @@ if __name__ == '__main__':
             print("la opción uniform otorga el mismo valor a los votos de los vecinos. La opción distance asigna un peso a los vecinos en función de su proximidad.")
             print("una ejemplo para usar este parametro en KNN sería: -k 1,5,2,uniform")
             print("si se estuviese usando el algoritmo decisiontree los hiperparámetros serían maxDepth,msx,msx_valor donde maxDepth es la profundidad máxima,")
-            print("msx puede tomar los valores 'min_sample_split' ó 'min_sample_leaf' y msx_valor representa el valor que va a tomar la variable min_sample_X")
-            print("una ejemplo para usar este parametro en decision trees sería: -k 5,min_sample_split,2")
+            print("msx puede tomar los valores 'min_samples_split' ó 'min_samples_leaf' y msx_valor representa el valor que va a tomar la variable min_sample_X")
+            print("una ejemplo para usar este parametro en decision trees sería: -k 5,min_samples_split,2")
             print("-t: indica el nombre del Target")
             print("nótese que si se pretende regenerar un modelo no se precisará introducir los parámetros -a, -k ni -t")
             print("un ejemplo de como se podría invocar al .py para entrenar un modelo sería: python miScriptSAD.py -u ./ -f iris.csv -a knn -k 1,5,2,distance -t Especie")
@@ -182,12 +224,11 @@ if __name__ == '__main__':
             ml_dataset[feature] = ml_dataset[feature].astype('double')
     
     # [HARDCODE] cambiar los valores del target_map
-    target_map = {'1': 1, '2': 2, '3': 3}
+    target_map = {'Iris-setosa': 0, 'Iris-virginica': 1, 'Iris-versicolor': 2}
     print(target_map)
     print(ml_dataset[target].map(str))
     ml_dataset['__target__'] = ml_dataset[target].map(str).map(target_map)
     del ml_dataset[target]
-    print(ml_dataset['__target__'])
 
     # se eliminan las filas para las que el TARGET es null / se pasan los datos que fueran float a Integer
     ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
@@ -198,13 +239,10 @@ if __name__ == '__main__':
 
     # [HARDCODE] se escoge la forma en la que se van a tratar los valores faltantes
     drop_rows_when_missing = []
-    impute_when_missing = [{'feature': 'Area', 'impute_with': 'MEAN'},
-                            {'feature': 'Perimeter', 'impute_with': 'MEAN'}, 
-                            {'feature': 'Compactness', 'impute_with': 'MEAN'}, 
-                            {'feature': 'kernelLength', 'impute_with': 'MEAN'},
-                            {'feature': 'KernelWidth', 'impute_with': 'MEAN'},
-                            {'feature': 'AsymmetryCoeff', 'impute_with': 'MEAN'},
-                            {'feature': 'KernelGrooveLength', 'impute_with': 'MEAN'}]
+    impute_when_missing = [{'feature': 'Largo de sepalo', 'impute_with': 'MEAN'},
+                            {'feature': 'Ancho de sepalo', 'impute_with': 'MEAN'}, 
+                            {'feature': 'Largo de petalo', 'impute_with': 'MEAN'}, 
+                            {'feature': 'Ancho de petalo', 'impute_with': 'MEAN'}]
 
     # se borran las filas donde hay datos faltantes para las features en 'drop_rows_when_missing'
     for feature in drop_rows_when_missing:
@@ -229,13 +267,10 @@ if __name__ == '__main__':
         print ('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
 
     # se reescalan los valores de las features con una media de 0 y una desviación estándar de 1
-    rescale_features = {'Area': 'AVGSTD', 
-                        'Perimeter': 'AVGSTD', 
-                        'Compactness': 'AVGSTD', 
-                        'kernelLength': 'AVGSTD',
-                        'KernelWidth': 'AVGSTD',
-                        'AsymmetryCoeff': 'AVGSTD',
-                        'KernelGrooveLength': 'AVGSTD'}
+    rescale_features = {'Largo de sepalo': 'AVGSTD', 
+                        'Ancho de sepalo': 'AVGSTD', 
+                        'Largo de petalo': 'AVGSTD', 
+                        'Ancho de petalo': 'AVGSTD'}
     for (feature_name, rescale_method) in rescale_features.items():
         if rescale_method == 'MINMAX':
             _min = train[feature_name].min()
@@ -260,6 +295,11 @@ if __name__ == '__main__':
 
     Y_train = np.array(train['__target__'])    
     Y_test = np.array(test['__target__'])
+
+    # se realiza el undersampling u oversampling si fuera necesario
+    #oversampler = RandomOverSampler()
+    #undersampler = RandomUnderSampler()
+    #X_resampled, y_resampled = undersampler.fit_resample(X_train, Y_train)
 
 #kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 #                   ALGORITMO KNN                   k
