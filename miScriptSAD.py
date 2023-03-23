@@ -34,7 +34,7 @@ def guardar_modelo(mejor_modelo):
 # regenerar el modelo para aplicarlo a datos nuevos
 def regenerar_modelo(nombre_modelo, fichero):
     X_nuevo = pd.read_csv(fichero)
-    # se reescalan los valores de las features con una media de 0 y una desviación estándar de 1
+    # [HARDCODE] se reescalan los valores de las features con una media de 0 y una desviación estándar de 1
     rescale_features = {'Largo de sepalo': 'AVGSTD', 'Ancho de sepalo': 'AVGSTD', 'Largo de petalo': 'AVGSTD', 'Ancho de petalo': 'AVGSTD'}
     for (feature_name, rescale_method) in rescale_features.items():
         if rescale_method == 'MINMAX':
