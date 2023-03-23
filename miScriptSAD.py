@@ -77,7 +77,7 @@ def coerce_to_unicode(x):
 if __name__ == '__main__':
     print('ARGV   :',sys.argv[1:])
     try:
-        options,remainder = getopt.getopt(sys.argv[1:],'u:m:f:h:a:k:',['u=','model=','testFile=','h','a=','k='])
+        options,remainder = getopt.getopt(sys.argv[1:],'u:m:f:h:a:k:t:',['u=','model=','testFile=','h','a=','k=','t='])
     except getopt.GetoptError as err:
         print('ERROR:',err)
         sys.exit(1)
@@ -91,7 +91,24 @@ if __name__ == '__main__':
         elif opt in ('-m', '--model'):
             m = arg
         elif opt in ('-h','--help'):
-            print(' -u testFilePath \n -m modelName \n -f testFileName \n -k parámetros del modelo \n ')
+            print("La forma correcta de usar el script es la siguiente: ")
+            print("El script puede recibir 6 parámetros: -u, -m, -f, -a, -k, -t")
+            print("-u: indica la ubicación en la que se hallan los archivos .csv y los modelos guardados.")
+            print("-m: sólo se le debe asignar un valor si se pretende regenerar un modelo. Indica el nombre del archivo .sav en el que se halla el modelo.")
+            print("-f: indica el nombre del archivo .csv tanto si se pretende entrenar el algoritmo como si se pretende realizar una predicción.")
+            print("-a: sólo admite los valores knn y decisiontree. Representa el algoritmo que se desea usar para el entrenamiento.")
+            print("-k: tódos los hiperparámetros se deben asignar aquí. Deben ir sin espacios y separados por comas.")
+            print("el orden para los hiperparámetros del KNN son kmin,k,p,w donde kmin es el número mínimo de vecinos, k es el número máximo de vecinos,")
+            print("p es el valor P máximo donde 1 representa la distancia de Manhatan y 2 es la distancia euclídea y, por último, w puede tomar los valores 'uniform' o 'distance'")
+            print("la opción uniform otorga el mismo valor a los votos de los vecinos. La opción distance asigna un peso a los vecinos en función de su proximidad.")
+            print("una ejemplo para usar este parametro en KNN sería: -k 1,5,2,uniform")
+            print("si se estuviese usando el algoritmo decisiontree los hiperparámetros serían maxDepth,msx,msx_valor donde maxDepth es la profundidad máxima,")
+            print("msx puede tomar los valores 'min_sample_split' ó 'min_sample_leaf' y msx_valor representa el valor que va a tomar la variable min_sample_X")
+            print("una ejemplo para usar este parametro en decision trees sería: -k 5,min_sample_split,2")
+            print("-t: indica el nombre del Target")
+            print("nótese que si se pretende regenerar un modelo no se precisará introducir los parámetros -a, -k ni -t")
+            print("un ejemplo de como se podría invocar al .py para entrenar un modelo sería: python miScriptSAD.py -u ./ -f iris.csv -a knn -k 1,5,2,distance -t Especie")
+            print("un ejemplo de como se podría invocar al .py para predecir clases utilizando un modelo sería: python miScriptSAD.py -u ./ -f predecir.csv -m mejormodelo.sav")
             exit(1)
         elif opt in ('-a', '--algorithm'):
             if arg not in ["knn", "decisiontree"]:
