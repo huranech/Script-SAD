@@ -14,6 +14,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from imblearn.over_sampling import RandomOverSampler
 from imblearn.under_sampling import RandomUnderSampler
+from sklearn.naive_bayes import GaussianNB
 
 #FUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNCFUNC
 #                   FUNCIONES                       F
@@ -165,8 +166,8 @@ if __name__ == '__main__':
             print("un ejemplo de como se podría invocar al .py para predecir clases utilizando un modelo sería: python miScriptSAD.py -u ./ -f predecir.csv -m mejormodelo.sav")
             exit(1)
         elif opt in ('-a', '--algorithm'):
-            if arg not in ["knn", "decisiontree"]:
-                print("el argumento -a debe ser knn, decisiontree o ambos")
+            if arg not in ["knn", "decisiontree", "naivebayes"]:
+                print("el argumento -a debe ser knn, decisiontree o naivebayes")
                 exit(0)
             else:
                 a = arg
@@ -387,6 +388,7 @@ if __name__ == '__main__':
 #ºººººººººººººººººººººººººººººººººººººººººººººººººººº
 #                   DECISION TREE                   º
 #ºººººººººººººººººººººººººººººººººººººººººººººººººººº
+
     elif a == "decisiontree":
 
         # antes de realizar los experimentos vamos a crear un array para guardarlos
@@ -475,3 +477,45 @@ if __name__ == '__main__':
 
         # se guarda el mejor modelo usando pickle
         guardar_modelo(mejor_modelo)
+
+#NBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNB
+#                    NAIVE BAYES                    N
+#NBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNBNB
+
+    elif a == "naivebayes":
+        # creamos una tupla para guardar el mejor modelo con su f_score
+        mejor_modelo = (None, 0)
+
+        # seleccionamos el Naive Bayes de Gauss
+        clf = GaussianNB()
+
+        # entrena el algoritmo para que, basándose en los datos de los features de X_train se cree una coincidencia con las labels de y_train
+        clf.fit(X_train, Y_train)
+
+        # se realizan las predicciones
+        predictions = clf.predict(X_test)
+        probas = clf.predict_proba(X_test)
+
+        predictions = pd.Series(data=predictions, index=X_test.index, name='predicted_value')
+        cols = [
+            u'probability_of_value_%s' % label
+            for (_, label) in sorted([(int(target_map[label]), label) for label in target_map])
+        ]
+        probabilities = pd.DataFrame(data=probas, index=X_test.index, columns=cols)
+
+        # construir la evaluación de los resultados
+        results_test = X_test.join(predictions, how='left')
+        results_test = results_test.join(probabilities, how='left')
+        results_test = results_test.join(test['__target__'], how='left')
+        results_test = results_test.rename(columns= {'__target__': 'TARGET'})
+
+        i=0
+        for real,pred in zip(Y_test,predictions):
+            print(real,pred)
+            i+=1
+            if i>5:
+                break
+        
+        print(f1_score(Y_test, predictions, average='micro'))
+        print(classification_report(Y_test,predictions))
+        print(confusion_matrix(Y_test, predictions, labels=[1,0]))
